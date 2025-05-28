@@ -2,43 +2,39 @@
   "version": "1.0",
   "libraries": [
     {
-      "name": "PonyXl-f-body.yaml",
-      "filetype": "yaml",
-      "type": "Female Body",
-      "skipLevels": 0,
-      "sections": {
-        "body_race": "Race",
-        "body_form": "Build"
-      },
-      "order": 4
-    },
-    {
-      "name": "PonyXl-expressions.yaml",
-      "filetype": "yaml",
-      "type": "Expressions",
-      "skipLevels": 0,
-      "sections": null,
-      "order": 8,
-      "ignoreKey": "chara_expression"
-    },
-    {
-      "name": "Danbooru-styles.yaml",
-      "filetype": "yaml",
-      "type": "visual-characteristics",
-      "skipLevels": 0,
-      "sections": {
-        "composition": "Composition",
-        "styles": "Styles"
-      },
-      "order": 11
-    },
-    {
-      "name": "test.csv",
+      "name": "pokegirl_full_clothing",
       "filetype": "csv",
-      "type": "test",
+      "type": "pokegirl_full_clothing",
       "skipLevels": 0,
-      "sections": null,
-      "order": 1
+      "sections": ""
+    },
+    {
+      "name": "pokegirl_minimal",
+      "filetype": "csv",
+      "type": "pokegirl_minimal",
+      "skipLevels": 0,
+      "sections": ""
+    },
+    {
+      "name": "Danbooru-styles",
+      "filetype": "yaml",
+      "type": "Danbooru-styles",
+      "skipLevels": 0,
+      "sections": ""
+    },
+    {
+      "name": "PonyXl-expressions",
+      "filetype": "yaml",
+      "type": "PonyXl-expressions",
+      "skipLevels": 0,
+      "sections": ""
+    },
+    {
+      "name": "PonyXl-f-body",
+      "filetype": "yaml",
+      "type": "PonyXl-f-body",
+      "skipLevels": 0,
+      "sections": ""
     }
   ]
 }

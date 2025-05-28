@@ -39,22 +39,22 @@ class PromptGallery {
 
 
         // Initialize category order from YAML files
-        this.yamlFiles.forEach(file => {
-            const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
-            const currentValue = this.app.ui.settings.getSettingValue(settingId, null);
-            if (currentValue === null) {
-                this.app.ui.settings.setSettingValue(settingId, file.order);
-            }
-        });
+        // this.yamlFiles.forEach(file => {
+        //     const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
+        //     const currentValue = this.app.ui.settings.getSettingValue(settingId, null);
+        //     if (currentValue === null) {
+        //         this.app.ui.settings.setSettingValue(settingId, file.order);
+        //     }
+        // });
 
-        // TODO
-        this.csvFiles.forEach(file => {
-            const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
-            const currentValue = this.app.ui.settings.getSettingValue(settingId, null);
-            if (currentValue === null) {
-                this.app.ui.settings.setSettingValue(settingId, file.order);
-            }
-        });
+        // // TODO
+        // this.csvFiles.forEach(file => {
+        //     const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
+        //     const currentValue = this.app.ui.settings.getSettingValue(settingId, null);
+        //     if (currentValue === null) {
+        //         this.app.ui.settings.setSettingValue(settingId, file.order);
+        //     }
+        // });
 
         // Initialize Female Body sub-categories
         // const femaleBodyFile = this.yamlFiles.find(file => file.type === "Female Body");
@@ -1270,7 +1270,7 @@ class PromptGallery {
                 for (const file of this.yamlFiles) {
                     if (!this.missingFiles.has(file.name)) {
                         try {
-                            const yamlContent = await this.fetchYamlContent(file.name);
+                            const yamlContent = await this.fetchContent(file.name, 'yaml');
                             if (yamlContent) {
                                 const parsedContent = this.parseYamlForImages(
                                     yamlContent,
@@ -1292,11 +1292,27 @@ class PromptGallery {
 
                 //TODO
                 for(const file of this.csvFiles) {
-                    try {
-
-                    }
-                    catch (error) {
-                        console.warn(`File ${file.name} couldn't be processed. Skipping.`);
+                    if (!this.missingFiles.has(file.name)) {
+                        try {
+                            const csvContent = await this.fetchContent(file.name, 'csv');
+                            if (csvContent) {
+                                let folderName = file.name.replace('.csv', '')
+                                const parsedContent = this.parseCSVForImages(
+                                    csvContent,
+                                    file.type,
+                                    folderName,
+                                    file.skipLevels,
+                                    file.sections,
+                                    file.pathAdjustment,
+                                    file.ignoreKey
+                                );
+                                
+                                this.allImages.push(...parsedContent);
+                                filesFound = true;
+                            }
+                        } catch (error) {
+                            console.warn(`File ${file.name} couldn't be processed. Skipping.`);
+                        }
                     }
                 }
     
@@ -1404,17 +1420,17 @@ class PromptGallery {
         this.accordion.appendChild(messageContainer);
     }
 
-    async fetchYamlContent(filename) {
+    async fetchContent(filename, filetype) {
         if (this.missingFiles.has(filename)) {
             return null;
         }
-        const response = await fetch(`${this.baseUrl}/prompt_gallery/get-file?filetype=yaml&filename=${filename}`);
+        const response = await fetch(`${this.baseUrl}/prompt_gallery/get-file?filetype=${filetype}&filename=${filename}`);
         if (response.status === 404) {
             this.missingFiles.add(filename);
             return null;
         }
         if (!response.ok) {
-            console.warn(`Failed to fetch YAML file ${filename}: ${response.statusText}`);
+            console.warn(`Failed to fetch file ${filename}: ${response.statusText}`);
             return null;
         }
         const content = await response.text();
@@ -1522,6 +1538,17 @@ class PromptGallery {
         });
     
         return images;
+    }
+
+    parseCSVForImages(content, type, filename, skipLevels, sections = null, pathAdjustment = null, ignoreKey = null){
+        const images = [];
+        content.split('\n').forEach(line => {
+            let seperated = line.split('|')
+            let imageUrl = `${this.baseUrl}/prompt_gallery/image?filename=${encodeURIComponent(seperated[0])}&subfolder=${encodeURIComponent(filename)}`;
+            let image = { name: seperated[0], path: imageUrl, tags: seperated[1], type: type, subcategory: null };
+            images.push(image)
+        });
+        return images           
     }
 
     displaypromptImages(images) {
@@ -1960,12 +1987,14 @@ app.registerExtension({
         // Sort yamlFiles by type for alphabetical order
         //TODO
         const sortedYamlFiles = [...gallery.yamlFiles].sort((b, a) => a.type.localeCompare(b.type));
-
+        let i = 0
         sortedYamlFiles.forEach((file) => {
+            i += 1
             if (!file.sections) {
                 const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
                 app.ui.settings.addSetting({
-                    id: settingId,
+                    id: i,
+                    // id: settingId,
                     name: `${file.type}`,
                     type: "number",
                     defaultValue: file.order,
@@ -1983,8 +2012,10 @@ app.registerExtension({
             if (file.sections) {
                 Object.entries(file.sections).forEach(([key, subCategory]) => {
                     const subSettingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}_${subCategory}`;
+                    console.log(subSettingId)
                     app.ui.settings.addSetting({
-                        id: subSettingId,
+                        id: file.name,
+                        // id: subSettingId,
                         name: `${file.type} - ${subCategory}`,
                         type: "number",
                         defaultValue: file.order,
@@ -1998,6 +2029,23 @@ app.registerExtension({
                     });
                 });
             }
+        });
+
+        gallery.csvFiles.forEach(file => {
+            i += 1
+            app.ui.settings.addSetting({
+                id: i,
+                name: `${file.type}`,
+                type: "number",
+                defaultValue: file.order,
+                min: 0,
+                step: 1,
+                onChange: (newVal, oldVal) => {
+                    if (app.promptGallery) {
+                        app.promptGallery.updateCategoryOrder();
+                    }
+                },
+            });
         });
 
         // Registering the sidebar tab
