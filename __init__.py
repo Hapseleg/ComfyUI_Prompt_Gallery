@@ -8,6 +8,8 @@ import mimetypes
 
 datapath = os.path.join(os.path.dirname(__file__), 'promptImages')
 
+def convert_txt_to_csv(filename):
+    return ""
 
 @PromptServer.instance.routes.get("/prompt_gallery/image")
 async def view_image(request):
@@ -81,22 +83,31 @@ async def upload_image(request):
         print(f"Error in upload_image: {str(e)}")
         return web.json_response({"error": str(e)}, status=500)
 
-@PromptServer.instance.routes.get("/prompt_gallery/yaml")
-async def view_yaml(request):
-    if "filename" in request.rel_url.query:
-        filename = request.rel_url.query["filename"]
+@PromptServer.instance.routes.get("/prompt_gallery/get-file")
+async def get_promptgallery_file(request):
+    url_vars = request.rel_url.query
+    datapath_get_file = datapath
+    if "filename" in url_vars:
+        filename = url_vars["filename"]
+        
+        if "filetype" in url_vars:
+            datapath_get_file = os.path.join(datapath, url_vars["filetype"])
 
-        if 'subfolder' in request.rel_url.query:
-            subfolder = request.rel_url.query["subfolder"]
+        if 'subfolder' in url_vars:
+            subfolder = url_vars["subfolder"]
             filename = os.path.join(filename, subfolder)
         else:
             subfolder = ""
 
         # validation for security: prevent accessing arbitrary path
-        if '..' in filename or '..' in subfolder:
-            return web.Response(status=400)
+        for key, value in url_vars.items():
+            if '..' in value:
+                print(f"{key}: {value}")
+                return web.Response(status=400)
+        # if '..' in filename or '..' in subfolder:
+        #     return web.Response(status=400)
 
-        fullpath = os.path.join(datapath, filename)
+        fullpath = os.path.join(datapath_get_file, filename)
 
         try:
             with open(fullpath) as yaml:
@@ -106,25 +117,25 @@ async def view_yaml(request):
             # print(f"YAML file not found: {fullpath}") cut down on needless noise
             return web.Response(text="", status=404)
         except Exception as e:
-            print(f"Error reading YAML file {fullpath}: {str(e)}")
+            print(f"Error reading file {fullpath}: {str(e)}")
             return web.Response(text="", status=500)
 
     return web.Response(status=400)
 
-@PromptServer.instance.routes.post("/prompt_gallery/update_libraries")
-async def update_libraries(request):
-    try:
-        data = await request.json()
-        filename = "promptGallery_libraries.json"
-        fullpath = os.path.join(datapath, filename)
+# @PromptServer.instance.routes.post("/prompt_gallery/update_libraries")
+# async def update_libraries(request):
+#     try:
+#         data = await request.json()
+#         filename = "promptGallery_libraries.json"
+#         fullpath = os.path.join(datapath, filename)
 
-        with open(fullpath, 'w') as f:
-            json.dump(data, f, indent=2)
+#         with open(fullpath, 'w') as f:
+#             json.dump(data, f, indent=2)
 
-        return web.Response(status=200)
-    except Exception as e:
-        print(f"Error updating libraries file: {str(e)}")
-        return web.Response(status=500, text=str(e))
+#         return web.Response(status=200)
+#     except Exception as e:
+#         print(f"Error updating libraries file: {str(e)}")
+#         return web.Response(status=500, text=str(e))
 
 
 NODE_CLASS_MAPPINGS = {

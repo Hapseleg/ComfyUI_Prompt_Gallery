@@ -23,6 +23,7 @@ class PromptGallery {
         this.librariesFile = "promptGallery_libraries.json";
         this.yamlFiles = []; // This will be populated from the libraries file
         this.loadLibraries().catch(error => console.error("Failed to load libraries:", error));
+        //TODO
         this.categories = this.yamlFiles.map(file => file.type);  // Derive categories from yamlFiles
         this.placeholderImageUrl = `${this.baseUrl}/prompt_gallery/image?filename=SKIP.jpeg`;
         this.customImages = [];
@@ -34,10 +35,20 @@ class PromptGallery {
         this.librariesLoadPromise = null;
         this.isDebugMode = false;
         this.toastEnabled = this.createEnableToastsCheckbox();
+        this.csvFiles = [];
 
 
         // Initialize category order from YAML files
         this.yamlFiles.forEach(file => {
+            const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
+            const currentValue = this.app.ui.settings.getSettingValue(settingId, null);
+            if (currentValue === null) {
+                this.app.ui.settings.setSettingValue(settingId, file.order);
+            }
+        });
+
+        // TODO
+        this.csvFiles.forEach(file => {
             const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
             const currentValue = this.app.ui.settings.getSettingValue(settingId, null);
             if (currentValue === null) {
@@ -320,18 +331,36 @@ class PromptGallery {
     async _loadLibrariesInternal() {
         try {
             const localLibraries = await this.getLocalLibraries();
-            const remoteLibraries = await this.getRemoteLibraries();
+            console.log(localLibraries)
+            // const remoteLibraries = await this.getRemoteLibraries();
 
-            if (this.autoUpdate && this.shouldUpdateLibraries(localLibraries, remoteLibraries)) {
-                this.log("Version Update available, auto update enabled");
-                await this.updateLocalLibraries(remoteLibraries);
-                this.yamlFiles = remoteLibraries.libraries;
-            } else {
-                this.log("No Version Update available, or auto update disabled");
-                this.yamlFiles = localLibraries.libraries;
-            }
+            // if (this.autoUpdate && this.shouldUpdateLibraries(localLibraries, remoteLibraries)) {
+            //     this.log("Version Update available, auto update enabled");
+            //     await this.updateLocalLibraries(remoteLibraries);
+            //     this.yamlFiles = remoteLibraries.libraries;
+            // } else {
+            //     this.log("No Version Update available, or auto update disabled");
+            // }
+            localLibraries.libraries.forEach(element => {
+                switch (element.filetype) {
+                    case "yaml":
+                        this.yamlFiles.push(element)
+                        break;
+                    case "csv":
+                        this.csvFiles.push(element)
+                        break;
+                    default:
+                        console.log(`WRONG FILETYPE IN ${element}.`);
+                }
+            });
 
-            this.categories = this.yamlFiles.map(file => file.type);
+            // this.yamlFiles = localLibraries.libraries;
+            // //TODO
+            // this.csvFiles = localLibraries.csv_libraries;
+
+            //TODO
+            this.categories = localLibraries.libraries.map(file => file.type);
+            // this.categories = this.yamlFiles.map(file => file.type);
             console.log(this.categories);
             this.log("Categories set:", this.categories);
             this.log("Loaded YAML Files:", JSON.stringify(this.yamlFiles, null, 2));
@@ -343,7 +372,7 @@ class PromptGallery {
         }
     }
 
-
+    
     async getLocalLibraries() {
         this.log("getLocalLibraries called, this.librariesFile:", this.librariesFile);
         
@@ -353,7 +382,7 @@ class PromptGallery {
         }
     
         try {
-            const url = `${this.baseUrl}/prompt_gallery/yaml?filename=${this.librariesFile}`;
+            const url = `${this.baseUrl}/prompt_gallery/get-file?filename=${this.librariesFile}`;
             this.log(`Attempting to fetch: ${url}`);
             const response = await fetch(url);
             this.log('Response status:', response.status);
@@ -377,37 +406,37 @@ class PromptGallery {
         throw new Error('Failed to load local prompt gallery libraries');
     }
 
-    async getRemoteLibraries() {
-        // Replace this URL with the actual URL of your remote libraries file
-        const response = await fetch(`https://raw.githubusercontent.com/Kinglord/ComfyUI_Prompt_Gallery/main/promptImages/${this.librariesFile}`);
-        if (response.ok) {
-            return await response.json();
-        }
-        throw new Error('Failed to load remote prompt gallery libraries');
-    }
+    // async getRemoteLibraries() {
+    //     // Replace this URL with the actual URL of your remote libraries file
+    //     const response = await fetch(`https://raw.githubusercontent.com/Kinglord/ComfyUI_Prompt_Gallery/main/promptImages/${this.librariesFile}`);
+    //     if (response.ok) {
+    //         return await response.json();
+    //     }
+    //     throw new Error('Failed to load remote prompt gallery libraries');
+    // }
 
-    shouldUpdateLibraries(localLibraries, remoteLibraries) {
-        return localLibraries.version !== remoteLibraries.version;
-    }
+    // shouldUpdateLibraries(localLibraries, remoteLibraries) {
+    //     return localLibraries.version !== remoteLibraries.version;
+    // }
 
-    async updateLocalLibraries(remoteLibraries) {
-        try {
-            const response = await api.fetchApi('/prompt_gallery/update_libraries', {
-                method: 'POST',
-                body: JSON.stringify(remoteLibraries),
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            });
-            if (!response.ok) {
-                throw new Error(`Failed to update local libraries: ${response.statusText}`);
-            }
-            this.log('Local libraries updated successfully');
-        } catch (error) {
-            console.error('Error updating local libraries:', error);
-            throw error; // Re-throw the error so it can be caught by the caller
-        }
-    }
+    // async updateLocalLibraries(remoteLibraries) {
+    //     try {
+    //         const response = await api.fetchApi('/prompt_gallery/update_libraries', {
+    //             method: 'POST',
+    //             body: JSON.stringify(remoteLibraries),
+    //             headers: {
+    //                 'Content-Type': 'application/json'
+    //             }
+    //         });
+    //         if (!response.ok) {
+    //             throw new Error(`Failed to update local libraries: ${response.statusText}`);
+    //         }
+    //         this.log('Local libraries updated successfully');
+    //     } catch (error) {
+    //         console.error('Error updating local libraries:', error);
+    //         throw error; // Re-throw the error so it can be caught by the caller
+    //     }
+    // }
     ///////
     
     async checkYamlFiles() {
@@ -415,7 +444,7 @@ class PromptGallery {
     
         for (const file of this.yamlFiles) {
             try {
-                const response = await fetch(`${this.baseUrl}/prompt_gallery/yaml?filename=${file.name}`);
+                const response = await fetch(`${this.baseUrl}/prompt_gallery/get-file?filetype=yaml&filename=${file.name}`);
                 if (!response.ok) {
                     this.log(`YAML file not found: ${file.name}`);
                     return false;
@@ -752,7 +781,7 @@ class PromptGallery {
 
     updateCategoryOrder() {
         const orderMap = new Map();
-    
+        //TODO
         this.yamlFiles.forEach(file => {
             const settingId = `Prompt Gallery.Category Order.${file.type.replace(/\s+/g, '')}`;
             const userOrder = this.app.ui.settings.getSettingValue(settingId, file.order);
@@ -1237,7 +1266,7 @@ class PromptGallery {
         try {
             if (this.allImages.length === 0) {
                 let filesFound = false;
-    
+                
                 for (const file of this.yamlFiles) {
                     if (!this.missingFiles.has(file.name)) {
                         try {
@@ -1258,6 +1287,16 @@ class PromptGallery {
                         } catch (error) {
                             console.warn(`File ${file.name} couldn't be processed. Skipping.`);
                         }
+                    }
+                }
+
+                //TODO
+                for(const file of this.csvFiles) {
+                    try {
+
+                    }
+                    catch (error) {
+                        console.warn(`File ${file.name} couldn't be processed. Skipping.`);
                     }
                 }
     
@@ -1369,7 +1408,7 @@ class PromptGallery {
         if (this.missingFiles.has(filename)) {
             return null;
         }
-        const response = await fetch(`${this.baseUrl}/prompt_gallery/yaml?filename=${filename}`);
+        const response = await fetch(`${this.baseUrl}/prompt_gallery/get-file?filetype=yaml&filename=${filename}`);
         if (response.status === 404) {
             this.missingFiles.add(filename);
             return null;
@@ -1470,13 +1509,13 @@ class PromptGallery {
                 }
     
                 // Special handling for generate_random items in Stereotypes (other_persona.yaml)
-                if (type === "Stereotypes") {
-                    const fullPath = stack.map(item => item.key).join('/');
-                    if (fullPath.includes('generate_random')) {
-                        image.section = 'Random';
-                        image.tags = tags.replace(/^"(.*)"$/, '$1');
-                    }
-                }
+                // if (type === "Stereotypes") {
+                //     const fullPath = stack.map(item => item.key).join('/');
+                //     if (fullPath.includes('generate_random')) {
+                //         image.section = 'Random';
+                //         image.tags = tags.replace(/^"(.*)"$/, '$1');
+                //     }
+                // }
                 
                 images.push(image);
             }
@@ -1919,6 +1958,7 @@ app.registerExtension({
         await gallery.loadLibraries();
 
         // Sort yamlFiles by type for alphabetical order
+        //TODO
         const sortedYamlFiles = [...gallery.yamlFiles].sort((b, a) => a.type.localeCompare(b.type));
 
         sortedYamlFiles.forEach((file) => {
